@@ -508,7 +508,6 @@ module Aerospike
             # close the connection to throw away its data and signal the server about the
             # situation. We will not put back the connection in the buffer.
             @conn.close if @conn
-            raise e
           end
 
           # Reflect healthy status.
