@@ -494,7 +494,8 @@ module Aerospike
           # Parse results.
           begin
             parse_result
-          rescue => e
+            @conn.close if @conn
+          rescue Aerospike::Exceptions::Aerospike => e
             case e
             # do not log the following exceptions
             when Aerospike::Exceptions::ScanTerminated
@@ -507,6 +508,9 @@ module Aerospike
             # cancelling/closing the batch/multi commands will return an error, which will
             # close the connection to throw away its data and signal the server about the
             # situation. We will not put back the connection in the buffer.
+            @conn.close if @conn
+            raise e
+          rescue
             @conn.close if @conn
           end
 
