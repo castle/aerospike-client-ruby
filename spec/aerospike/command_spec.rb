@@ -30,12 +30,14 @@ RSpec.describe Aerospike::Command do
         expect(policy.max_retries).to be > 0
 
         expect(subject).to receive(:parse_result).once do
+          expect(subject).to receive(:parse_result).and_call_original
+
           raise Errno::ECONNRESET
         end
 
-        allow(subject).to receive(:parse_result).and_call_original
-
         subject.execute
+
+        expect(subject.exists).to be false
       end
     end
   end

@@ -494,7 +494,6 @@ module Aerospike
           # Parse results.
           begin
             parse_result
-            @conn.close if @conn
           rescue Aerospike::Exceptions::Aerospike => e
             case e
             # do not log the following exceptions
@@ -512,6 +511,7 @@ module Aerospike
             raise e
           rescue
             @conn.close if @conn
+            next
           end
 
           # Reflect healthy status.
