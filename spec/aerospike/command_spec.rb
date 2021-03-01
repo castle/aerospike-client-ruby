@@ -1,7 +1,5 @@
 # frozen_string_literal: true
 
-# Copyright 2021 Castle, Inc.
-#
 # Portions may be licensed to Aerospike, Inc. under one or more contributor
 # license agreements.
 #
