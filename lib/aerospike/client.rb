@@ -542,9 +542,8 @@ module Aerospike
       statement.set_aggregate_function(package_name, function_name, function_args, false)
 
       # Use a thread per node
-      nodes.each do |node|
+      threads = nodes.map do |node|
         Thread.new do
-          Thread.current.abort_on_exception = true
           begin
             command = QueryCommand.new(node, policy, statement, nil)
             execute_command(command)
@@ -554,6 +553,9 @@ module Aerospike
           end
         end
       end
+
+      # check for value of each threads. If any thread fails, this will raise an error.
+      threads.each(&:join)
 
       ExecuteTask.new(@cluster, statement)
     end
