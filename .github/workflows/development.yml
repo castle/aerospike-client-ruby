@@ -32,12 +32,14 @@ jobs:
         ruby-version: ${{matrix.ruby}}
         bundler-cache: true
     
+    - name: Install packages (ubuntu)
+      run: sudo .github/workflows/install_packages.sh
+    
     - name: Start server
       timeout-minutes: 5
       env:
         TERM: dumb
-      run:
-        .github/workflows/start_cluster.sh 2
+      run: .github/workflows/start_cluster.sh 2
     
     - name: Run tests
       timeout-minutes: 30
