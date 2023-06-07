@@ -542,6 +542,7 @@ module Aerospike
       # Use a thread per node
       threads = nodes.map do |node|
         partitions = node.cluster.node_partitions(node, statement.namespace)
+
         Thread.new do
           begin
             command = QueryCommand.new(node, policy, statement, nil, partitions)
