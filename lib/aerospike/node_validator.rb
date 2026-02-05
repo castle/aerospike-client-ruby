@@ -20,12 +20,13 @@
 module Aerospike
   class NodeValidator # :nodoc:
 
-    attr_reader :host, :aliases, :name, :features, :cluster_name, :tls_options, :conn
+    attr_reader :host, :timeout, :aliases, :name, :features, :cluster_name, :tls_options, :conn
 
     def initialize(cluster, host, timeout, cluster_name, tls_options = {})
       @cluster = cluster
       @features = Set.new
       @host = host
+      @timeout = timeout
       @cluster_name = cluster_name
       @tls_options = tls_options
 
@@ -44,7 +45,7 @@ module Aerospike
 
       begin
         conn = Cluster::CreateConnection.(@cluster, Host.new(address, host.port, host.tls_name))
-        conn.timeout = @cluster.connection_timeout
+        conn.timeout = timeout
 
         commands = %w[node features]
         commands << address_command unless is_loopback?(address)

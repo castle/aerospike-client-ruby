@@ -21,6 +21,7 @@ describe Aerospike::NodeValidator do
     before do
       allow(socket).to receive(:write).and_return(nil)
       allow(socket).to receive(:read).and_return(nil)
+      allow(socket).to receive(:timeout=).and_return(nil)
       expect(::Aerospike::Cluster::CreateConnection).to receive(:call).and_return(socket)
     end
 
@@ -31,6 +32,7 @@ describe Aerospike::NodeValidator do
     let(:hosts) { [::Aerospike::Host.new('192.168.1.1', '3000')] }
 
     before do
+      allow(socket).to receive(:timeout=).and_return(nil)
       allow(::Aerospike::Cluster::CreateConnection).to receive(:call).and_return(socket)
 
       expect(::Aerospike::Info).to receive(:request).and_return(
@@ -49,6 +51,7 @@ describe Aerospike::NodeValidator do
     let(:hosts) { [::Aerospike::Host.new('my.lb.com', '3000')] }
 
     before do
+      allow(socket).to receive(:timeout=).and_return(nil)
       allow(::Aerospike::Cluster::CreateConnection).to receive(:call).and_return(socket)
       expect(Resolv).to receive(:getaddresses).and_return(['101.1.1.1', '102.1.1.1'])
 
@@ -79,6 +82,7 @@ describe Aerospike::NodeValidator do
     let(:policy) { ::Aerospike::ClientPolicy.new(tls: { enable: true }) }
 
     before do
+      allow(socket).to receive(:timeout=).and_return(nil)
       allow(::Aerospike::Cluster::CreateConnection).to receive(:call).and_return(socket)
       expect(Resolv).to receive(:getaddresses).and_return(['101.1.1.1', '102.1.1.1'])
 
