@@ -44,6 +44,7 @@ module Aerospike
 
       begin
         conn = Cluster::CreateConnection.(@cluster, Host.new(address, host.port, host.tls_name))
+        conn.timeout = @cluster.connection_timeout
 
         commands = %w[node features]
         commands << address_command unless is_loopback?(address)
