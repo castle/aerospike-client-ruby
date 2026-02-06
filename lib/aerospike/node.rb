@@ -120,6 +120,7 @@ module Aerospike
     def tend_connection
       if @tend_connection.nil? || @tend_connection.closed?
         @tend_connection = Cluster::CreateConnection.(cluster, host)
+        @tend_connection.timeout = cluster.connection_timeout
       end
       @tend_connection
     end
