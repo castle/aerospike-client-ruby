@@ -35,6 +35,15 @@ module Aerospike
       resolve(host.name).each do |address|
         @aliases += get_hosts(address)
       end
+
+      # Reject a half-initialized validator: `get_hosts` swallows connection
+      # errors silently, so without this guard a degenerate `nv` (no name, no
+      # aliases) escapes to `Cluster#create_node` and produces a `Node` with
+      # `@host = nil` that crashes on the next tend cycle.
+      if @name.nil? || @aliases.empty?
+        raise ::Aerospike::Exceptions::InvalidNode,
+              "Failed to validate node at #{host}: name=#{@name.inspect} aliases=#{@aliases.size}"
+      end
     end
 
     private
@@ -66,8 +75,8 @@ module Aerospike
         end
 
         res = aliases.map { |al| Host.new(al[:address], al[:port], host.tls_name) }
-      rescue
-        # we don't care about the actual connection error; Just need to continue
+      rescue => e
+        ::Aerospike.logger.debug { "NodeValidator: get_hosts(#{address}) failed: #{e.class}: #{e.message}" }
       ensure
         conn.close if conn
       end

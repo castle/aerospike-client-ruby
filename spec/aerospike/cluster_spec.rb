@@ -144,4 +144,37 @@ RSpec.describe Aerospike::Cluster do
       it { is_expected.to be false }
     end
   end
+
+  describe '#launch_tend_thread (Fix C: rescue path must not skip sleep)' do
+    subject(:launch!) { instance.send(:launch_tend_thread) }
+
+    let(:tend_calls) { ::Aerospike::Atomic.new(0) }
+    let(:sleep_calls) { ::Aerospike::Atomic.new(0) }
+
+    before do
+      instance.instance_variable_set(:@tend_interval, 1)
+      allow(instance).to receive(:tend) do
+        tend_calls.update { |c| c + 1 }
+        raise StandardError, 'persistent tend failure'
+      end
+      allow(instance).to receive(:sleep) do |_|
+        calls = sleep_calls.update { |c| c + 1 }
+        Thread.exit if calls >= 3
+      end
+      allow(::Aerospike.logger).to receive(:error)
+      allow(::Aerospike.logger).to receive(:debug)
+    end
+
+    after do
+      instance.instance_variable_get(:@tend_thread)&.kill
+    end
+
+    it 'sleeps once per iteration even when tend raises persistently (no busy-loop)' do
+      launch!
+      instance.instance_variable_get(:@tend_thread).join(2)
+
+      expect(sleep_calls.value).to eq(tend_calls.value)
+      expect(sleep_calls.value).to be >= 3
+    end
+  end
 end

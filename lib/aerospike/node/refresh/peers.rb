@@ -43,6 +43,19 @@ module Aerospike
                 begin
                   nv = NodeValidator.new(cluster, host, cluster.connection_timeout, cluster.cluster_name, cluster.tls_options)
 
+                  # Defense-in-depth at the integration point: refuse a half-initialized
+                  # validator before it reaches `cluster.create_node`. A `nv` with empty
+                  # aliases produces a `Node` with `@host = nil` that crashes every
+                  # subsequent tend cycle. Must run before the mismatch check below — the
+                  # `name == peer.node_name && aliases.empty?` case slips past it cleanly.
+                  if nv.name.nil? || nv.aliases.empty?
+                    ::Aerospike.logger.warn(
+                      "Skipping peer #{peer.node_name} at #{host}: validator returned " \
+                      "name=#{nv.name.inspect} aliases=#{nv.aliases.size}"
+                    )
+                    next
+                  end
+
                   if nv.name != peer.node_name
                     ::Aerospike.logger.warn("Peer node #{peer.node_name} is different than actual node #{nv.name} for host #{host}");
                     # Must look for new node name in the unlikely event that node names do not agree.

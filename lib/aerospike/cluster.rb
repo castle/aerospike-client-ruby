@@ -369,13 +369,17 @@ module Aerospike
       @tend_thread = Thread.new do
         Thread.current.abort_on_exception = false
         loop do
-
+          # Sleep is unconditional: the previous structure put `sleep` on the
+          # success path of an implicit `begin/rescue`, so a persistent error
+          # (e.g. a poisoned `@cluster_nodes` entry) busy-looped at full CPU
+          # and produced ~50 errors/sec. The rescue must not skip the backoff.
+          begin
             tend
-            sleep(@tend_interval / 1000.0)
-        rescue => e
+          rescue => e
             Aerospike.logger.error("Exception occured during tend: #{e}")
             Aerospike.logger.debug { e.backtrace.join("\n") }
-
+          end
+          sleep(@tend_interval / 1000.0)
         end
       end
     end

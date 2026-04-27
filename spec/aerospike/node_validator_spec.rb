@@ -19,10 +19,9 @@ describe Aerospike::NodeValidator do
     let(:hosts) { [::Aerospike::Host.new('127.0.0.1', '3000')] }
 
     before do
-      allow(socket).to receive(:write).and_return(nil)
-      allow(socket).to receive(:read).and_return(nil)
       allow(socket).to receive(:timeout=).and_return(nil)
-      expect(::Aerospike::Cluster::CreateConnection).to receive(:call).and_return(socket)
+      allow(::Aerospike::Cluster::CreateConnection).to receive(:call).and_return(socket)
+      allow(::Aerospike::Info).to receive(:request).and_return({ 'node' => 'test-node' })
     end
 
     it { expect(validator.aliases).to eq(hosts) }
@@ -35,7 +34,7 @@ describe Aerospike::NodeValidator do
       allow(socket).to receive(:timeout=).and_return(nil)
       allow(::Aerospike::Cluster::CreateConnection).to receive(:call).and_return(socket)
 
-      expect(::Aerospike::Info).to receive(:request).and_return(
+      allow(::Aerospike::Info).to receive(:request).and_return(
         {
           'node' => 'test-node',
           'service-clear-std' => '192.168.1.1:3000'
@@ -53,15 +52,13 @@ describe Aerospike::NodeValidator do
     before do
       allow(socket).to receive(:timeout=).and_return(nil)
       allow(::Aerospike::Cluster::CreateConnection).to receive(:call).and_return(socket)
-      expect(Resolv).to receive(:getaddresses).and_return(['101.1.1.1', '102.1.1.1'])
+      allow(Resolv).to receive(:getaddresses).and_return(['101.1.1.1', '102.1.1.1'])
 
-      expect(::Aerospike::Info).to receive(:request).and_return(
+      allow(::Aerospike::Info).to receive(:request).and_return(
         {
           'node' => 'test-node',
           'service-clear-std' => '101.1.1.2:3002,101.1.1.3:3003'
-        }
-      )
-      expect(::Aerospike::Info).to receive(:request).and_return(
+        },
         {
           'node' => 'test-node',
           'service-clear-std' => '102.1.1.2:3002,102.1.1.3:3003'
@@ -84,15 +81,13 @@ describe Aerospike::NodeValidator do
     before do
       allow(socket).to receive(:timeout=).and_return(nil)
       allow(::Aerospike::Cluster::CreateConnection).to receive(:call).and_return(socket)
-      expect(Resolv).to receive(:getaddresses).and_return(['101.1.1.1', '102.1.1.1'])
+      allow(Resolv).to receive(:getaddresses).and_return(['101.1.1.1', '102.1.1.1'])
 
-      expect(::Aerospike::Info).to receive(:request).and_return(
+      allow(::Aerospike::Info).to receive(:request).and_return(
         {
           'node' => 'test-node',
           'service-tls-std' => '101.1.1.2:3002,101.1.1.3:3003'
-        }
-      )
-      expect(::Aerospike::Info).to receive(:request).and_return(
+        },
         {
           'node' => 'test-node',
           'service-tls-std' => '102.1.1.2:3002,102.1.1.3:3003'
@@ -105,6 +100,31 @@ describe Aerospike::NodeValidator do
       expect(validator.aliases.map { |a| a.to_s }).to match_array(
         %w[101.1.1.2:3002 101.1.1.3:3003 102.1.1.2:3002 102.1.1.3:3003]
       )
+    end
+  end
+
+  describe 'post-condition: refuses half-initialized validators' do
+    let(:hosts) { [::Aerospike::Host.new('192.168.1.1', '3000')] }
+
+    before do
+      allow(socket).to receive(:timeout=).and_return(nil)
+      allow(::Aerospike::Cluster::CreateConnection).to receive(:call).and_return(socket)
+    end
+
+    context 'when get_hosts fails before assigning @name' do
+      before { allow(::Aerospike::Info).to receive(:request).and_raise(Errno::ETIMEDOUT) }
+
+      it 'raises InvalidNode' do
+        expect { validator }.to raise_error(::Aerospike::Exceptions::InvalidNode, /name=nil aliases=0/)
+      end
+    end
+
+    context 'when @name is set but aliases stay empty (path 4)' do
+      before { allow(::Aerospike::Info).to receive(:request).and_return({ 'node' => 'test-node' }) }
+
+      it 'raises InvalidNode even though @name was assigned' do
+        expect { validator }.to raise_error(::Aerospike::Exceptions::InvalidNode, /aliases=0/)
+      end
     end
   end
 end
