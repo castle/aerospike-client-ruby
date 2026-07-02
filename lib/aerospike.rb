@@ -123,6 +123,8 @@ require "aerospike/socket/tcp"
 require "aerospike/connection/authenticate"
 require "aerospike/connection/create"
 
+require "aerospike/metrics_listener"
+require "aerospike/cluster_stats"
 require "aerospike/cluster"
 require "aerospike/cluster/create_connection"
 require "aerospike/cluster/find_nodes_to_remove"

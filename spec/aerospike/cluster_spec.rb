@@ -177,4 +177,42 @@ RSpec.describe Aerospike::Cluster do
       expect(sleep_calls.value).to be >= 3
     end
   end
+
+  describe '#report_metrics' do
+    subject(:report_metrics) { instance.report_metrics }
+
+    before { allow(instance).to receive(:nodes).and_return([]) }
+
+    context 'without a metrics listener' do
+      it 'does nothing' do
+        instance.instance_variable_set(:@metrics_listener, nil)
+        expect(instance).not_to receive(:cluster_stats)
+        report_metrics
+      end
+    end
+
+    context 'with a metrics listener' do
+      let(:listener) { spy('metrics_listener') }
+
+      before { instance.instance_variable_set(:@metrics_listener, listener) }
+
+      it 'reports a ClusterStats snapshot' do
+        report_metrics
+        expect(listener).to have_received(:report).with(an_instance_of(Aerospike::ClusterStats))
+      end
+
+      context 'when the listener raises' do
+        before do
+          allow(listener).to receive(:report).and_raise(StandardError, 'boom')
+          allow(::Aerospike.logger).to receive(:error)
+          allow(::Aerospike.logger).to receive(:debug)
+        end
+
+        it 'isolates the error so tending is not disrupted' do
+          expect { report_metrics }.not_to raise_error
+          expect(::Aerospike.logger).to have_received(:error).with(/metrics listener/)
+        end
+      end
+    end
+  end
 end

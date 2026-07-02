@@ -28,6 +28,7 @@ module Aerospike
     attr_accessor :tls
     attr_accessor :policies
     attr_accessor :rack_aware, :rack_id
+    attr_accessor :metrics_listener
 
     def initialize(opt={})
       # Initial host connection timeout in seconds. The timeout when opening a connection
@@ -94,6 +95,16 @@ module Aerospike
       #
       # Default: 0
       @min_connections_per_node = opt[:min_connections_per_node] || 0
+
+      # Optional listener that receives periodic cluster metrics. Any object
+      # responding to +report(cluster_stats)+ is accepted; see
+      # Aerospike::MetricsListener and Aerospike::ClusterStats. When set, its
+      # #report method is invoked from the tend thread once per tend interval
+      # with a fresh snapshot. Useful for exporting node count, connection
+      # counts, etc. to Datadog/StatsD/Prometheus.
+      #
+      # Default: nil (no metrics reporting)
+      @metrics_listener = opt[:metrics_listener]
     end
 
     def requires_authentication

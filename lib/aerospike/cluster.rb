@@ -48,6 +48,7 @@ module Aerospike
       @closed = Atomic.new(true)
       @mutex = Mutex.new
       @cluster_config_change_listeners = Atomic.new([])
+      @metrics_listener = policy.metrics_listener
 
       @old_node_count = 0
 
@@ -375,6 +376,7 @@ module Aerospike
           # and produced ~50 errors/sec. The rescue must not skip the backoff.
           begin
             tend
+            report_metrics
           rescue => e
             Aerospike.logger.error("Exception occured during tend: #{e}")
             Aerospike.logger.debug { e.backtrace.join("\n") }
@@ -510,6 +512,27 @@ module Aerospike
       listeners = @cluster_config_change_listeners.get
       listeners.each do |listener|
         listener.send(:cluster_config_changed, self)
+      end
+    end
+
+    # Snapshot of current cluster statistics (node count, per-node connection
+    # and failure counts). See Aerospike::ClusterStats.
+    def cluster_stats
+      ClusterStats.new(nodes)
+    end
+
+    # Report cluster metrics to the configured metrics listener, if any.
+    # Invoked once per tend interval from the tend thread. Errors raised by the
+    # listener are isolated here so a broken reporter cannot disrupt tending.
+    def report_metrics
+      listener = @metrics_listener
+      return unless listener
+
+      begin
+        listener.report(cluster_stats)
+      rescue => e
+        Aerospike.logger.error("Exception in metrics listener: #{e}")
+        Aerospike.logger.debug { e.backtrace.join("\n") }
       end
     end
 
