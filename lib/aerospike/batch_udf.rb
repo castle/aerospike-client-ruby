@@ -64,7 +64,7 @@ module Aerospike
      size += @policy&.filter_exp&.size if @policy&.filter_exp
 
      if @policy&.send_key
-       size += @key.user_key.estimate_size + Aerospike::FIELD_HEADER_SIZE + 1
+       size += @key.user_key_as_value.estimate_size + Aerospike::FIELD_HEADER_SIZE + 1
      end
      size += @package_name.bytesize + Aerospike::FIELD_HEADER_SIZE
      size += @function_name.bytesize + Aerospike::FIELD_HEADER_SIZE
