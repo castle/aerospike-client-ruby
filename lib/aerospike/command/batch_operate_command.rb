@@ -125,6 +125,14 @@ module Aerospike
       mark_compressed(@policy)
     end
 
+    # Batch operate reports per-record status on each BatchRecord, so a non-OK
+    # result code for a single record must not abort the whole batch. Capture
+    # every code in parse_row instead of raising (matches respond_all_keys
+    # semantics of the Java/C/Go clients).
+    def handle_result_code(result_code)
+      # NOOP
+    end
+
     # Parse all results in the batch.  Add records to shared list.
     # If the record was not found, the bins will be nil.
     def parse_row(result_code)
