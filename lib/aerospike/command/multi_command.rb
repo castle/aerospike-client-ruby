@@ -98,15 +98,7 @@ module Aerospike
         read_bytes(MSG_REMAINING_HEADER_SIZE)
         result_code = @data_buffer.read(5).ord & 0xFF
 
-        # The only valid server return codes are "ok", "not found" and "filtered out".
-        # If other return codes are received, then abort the batch.
-        if result_code != 0
-            if [Aerospike::ResultCode::KEY_NOT_FOUND_ERROR, Aerospike::ResultCode::FILTERED_OUT].include?(result_code)
-              # NOOP
-            else
-              raise Aerospike::Exceptions::Aerospike.new(result_code, nil, [@node])
-            end
-        end
+        handle_result_code(result_code)
 
         # If cmd is the end marker of the response, do not proceed further
         info3 = @data_buffer.read(3).ord
@@ -116,6 +108,21 @@ module Aerospike
       end
 
       true
+    end
+
+    # Decide what to do with a per-record result code before the row is parsed.
+    #
+    # The only valid server return codes are "ok", "not found" and "filtered out".
+    # If other return codes are received, then abort the batch by raising.
+    #
+    # Commands that report per-record status (e.g. batch operate) override this
+    # to treat non-OK codes as data captured on each record instead of aborting
+    # the whole batch.
+    def handle_result_code(result_code)
+      return if result_code == 0
+      return if [Aerospike::ResultCode::KEY_NOT_FOUND_ERROR, Aerospike::ResultCode::FILTERED_OUT].include?(result_code)
+
+      raise Aerospike::Exceptions::Aerospike.new(result_code, nil, [@node])
     end
 
     def parse_key(field_count)

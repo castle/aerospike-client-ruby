@@ -203,6 +203,30 @@ describe Aerospike::Client do
         expect(exists).to eql false
 
       end
+
+      it 'reports per-record failures without aborting the whole batch' do
+        good_ops = [Aerospike::Operation.put(Aerospike::Bin.new("new_bin", "value"))]
+        # `add` on the pre-existing string bin "key" is a type mismatch, so the
+        # server rejects this single record with BIN_TYPE_ERROR.
+        bad_ops = [Aerospike::Operation.add(Aerospike::Bin.new("key", 1))]
+
+        records = [
+          Aerospike::BatchWrite.new(keys.first, good_ops),
+          Aerospike::BatchWrite.new(keys.last, bad_ops)
+        ]
+
+        expect { client.batch_operate(records, batch_policy) }.not_to raise_error
+
+        # The healthy record is applied and reported as OK...
+        expect(records[0].result_code).to eql Aerospike::ResultCode::OK
+        expect(records[0].record).not_to be_nil
+
+        # ...while the failing record carries its own error code.
+        expect(records[1].result_code).to eql Aerospike::ResultCode::BIN_TYPE_ERROR
+
+        # The successful write is durable and readable.
+        expect(client.get(keys.first).bins["new_bin"]).to eql "value"
+      end
     end
 
     context '#BatchDelete' do
